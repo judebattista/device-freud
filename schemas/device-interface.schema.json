@@ -1,0 +1,725 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.org/device-interface/v1.0.0.json",
+  "title": "Device Interface",
+  "description": "Generic device-interface description: identifying info, physical interfaces, logical protocols, and commands with executable bindings.",
+  "type": "object",
+  "required": ["schema_version", "device", "interfaces", "protocols", "commands"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "schema_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "device":     { "$ref": "#/$defs/device" },
+    "interfaces": { "type": "array", "items": { "$ref": "#/$defs/interface" }, "minItems": 1 },
+    "protocols":  { "type": "array", "items": { "$ref": "#/$defs/protocol" }, "minItems": 1 },
+    "commands":   { "type": "array", "items": { "$ref": "#/$defs/command" }, "minItems": 1 }
+  },
+  "$defs": {
+    "device": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["manufacturer", "model"],
+      "properties": {
+        "manufacturer":     { "type": "string", "minLength": 1 },
+        "model":            { "type": "string", "minLength": 1 },
+        "name":             { "type": "string" },
+        "firmware_version": { "type": "string" },
+        "description":      { "type": "string" },
+        "documentation": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "manual_url":      { "type": "string", "format": "uri" },
+            "manual_revision": { "type": "string" },
+            "references": {
+              "type": "array",
+              "items": { "type": "object" }
+            }
+          }
+        },
+        "extensions": { "type": "object", "additionalProperties": true }
+      }
+    },
+    "interface": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind"],
+      "properties": {
+        "id":         { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_-]*$" },
+        "kind": {
+          "type": "string",
+          "enum": ["ethernet", "usb", "rs232", "rs485", "gpib", "can", "i2c", "spi", "wireless", "other"]
+        },
+        "connector":  { "type": "string" },
+        "physical":   { "type": "object" },
+        "notes":      { "type": "string" },
+        "extensions": { "type": "object", "additionalProperties": true }
+      }
+    },
+    "protocol": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "runs_on"],
+      "properties": {
+        "id":   { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_-]*$" },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "scpi", "modbus_rtu", "modbus_tcp", "opc_ua",
+            "ethernet_ip", "profinet", "ethercat", "canopen", "j1939",
+            "http_rest", "mqtt", "snmp", "grpc",
+            "raw_serial", "i2c_register", "spi_register", "usb_tmc",
+            "file_transfer", "other"
+          ]
+        },
+        "runs_on": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "version":    { "type": "string" },
+        "defaults":   { "type": "object" },
+        "connection": { "type": "object" },
+        "extensions": { "type": "object", "additionalProperties": true }
+      }
+    },
+    "command": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "description", "parameters", "output", "binding"],
+      "properties": {
+        "id":          { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_-]*$" },
+        "name":        { "type": "string", "minLength": 1 },
+        "description": { "type": "string", "minLength": 1 },
+        "category": {
+          "type": "string",
+          "enum": ["measurement", "configuration", "control", "query", "diagnostic", "firmware", "other"]
+        },
+        "parameters":    { "type": "array", "items": { "$ref": "#/$defs/parameter" } },
+        "output":        { "$ref": "#/$defs/output" },
+        "binding":       { "$ref": "#/$defs/binding" },
+        "preconditions": { "type": "array", "items": { "type": "string" } },
+        "side_effects":  { "type": "array", "items": { "type": "string" } },
+        "errors":        { "type": "array", "items": { "$ref": "#/$defs/error" } },
+        "examples":      { "type": "array", "items": { "$ref": "#/$defs/example" } },
+        "extensions":    { "type": "object", "additionalProperties": true }
+      }
+    },
+    "parameter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "description", "type"],
+      "properties": {
+        "name":        { "type": "string", "pattern": "^[a-z_][a-z0-9_]*$" },
+        "description": { "type": "string", "minLength": 1 },
+        "type": {
+          "type": "string",
+          "enum": ["integer", "number", "string", "boolean", "array", "object", "bytes"]
+        },
+        "wire_type": {
+          "type": ["string", "null"],
+          "enum": [
+            "uint8", "uint16", "uint32", "uint64",
+            "int8", "int16", "int32", "int64",
+            "float32", "float64",
+            "bool", "ascii", "utf8", "hex_bytes", "bcd",
+            null
+          ]
+        },
+        "units":          { "type": ["string", "null"] },
+        "allowed_values": { "type": "array", "minItems": 1 },
+        "range": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "min":  {},
+            "max":  {},
+            "step": {}
+          }
+        },
+        "default":  {},
+        "required": { "type": "boolean" },
+        "example":  {}
+      },
+      "not": {
+        "anyOf": [
+          { "required": ["allowed_values", "range"] }
+        ]
+      }
+    },
+    "output": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": ["scalar", "array", "record", "stream", "file", "none"]
+        },
+        "type": {
+          "type": "string",
+          "enum": ["integer", "number", "string", "boolean", "array", "object", "bytes"]
+        },
+        "wire_type": {
+          "type": ["string", "null"],
+          "enum": [
+            "uint8", "uint16", "uint32", "uint64",
+            "int8", "int16", "int32", "int64",
+            "float32", "float64",
+            "bool", "ascii", "utf8", "hex_bytes", "bcd",
+            null
+          ]
+        },
+        "units":           { "type": ["string", "null"] },
+        "allowed_values":  { "type": "array", "minItems": 1 },
+        "range":           { "type": "object" },
+        "description":     { "type": "string" },
+        "example":         {},
+        "fields":          { "type": "array", "items": { "$ref": "#/$defs/parameter" } },
+        "elements":        { "$ref": "#/$defs/parameter" },
+        "file_size_bytes": { "type": "integer", "minimum": 0 },
+        "mime_type":       { "type": "string" },
+        "checksum":        { "type": "object" }
+      },
+      "allOf": [
+        {
+          "if":   { "properties": { "kind": { "const": "record" } }, "required": ["kind"] },
+          "then": { "required": ["fields"] }
+        },
+        {
+          "if":   { "properties": { "kind": { "const": "array" } }, "required": ["kind"] },
+          "then": { "required": ["elements"] }
+        }
+      ]
+    },
+    "error": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "description"],
+      "properties": {
+        "code":        { "type": "string", "minLength": 1 },
+        "wire_code":   {},
+        "description": { "type": "string", "minLength": 1 },
+        "recovery":    { "type": "string" }
+      }
+    },
+    "example": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "parameters": { "type": "object" },
+        "output":     {},
+        "note":       { "type": "string" }
+      }
+    },
+    "binding": {
+      "type": "object",
+      "required": ["protocol_id", "protocol_kind"],
+      "properties": {
+        "protocol_id":   { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_-]*$" },
+        "protocol_kind": {
+          "type": "string",
+          "enum": [
+            "scpi", "usb_tmc", "modbus_rtu", "modbus_tcp", "opc_ua",
+            "ethernet_ip", "profinet", "ethercat", "canopen", "j1939",
+            "http_rest", "mqtt", "snmp", "grpc",
+            "raw_serial", "i2c_register", "spi_register",
+            "file_transfer", "other"
+          ]
+        }
+      },
+      "oneOf": [
+        { "$ref": "#/$defs/bindings/scpi" },
+        { "$ref": "#/$defs/bindings/usb_tmc" },
+        { "$ref": "#/$defs/bindings/modbus_tcp" },
+        { "$ref": "#/$defs/bindings/modbus_rtu" },
+        { "$ref": "#/$defs/bindings/http_rest" },
+        { "$ref": "#/$defs/bindings/grpc" },
+        { "$ref": "#/$defs/bindings/mqtt" },
+        { "$ref": "#/$defs/bindings/raw_serial" },
+        { "$ref": "#/$defs/bindings/canopen" },
+        { "$ref": "#/$defs/bindings/j1939" },
+        { "$ref": "#/$defs/bindings/i2c_register" },
+        { "$ref": "#/$defs/bindings/spi_register" },
+        { "$ref": "#/$defs/bindings/opc_ua" },
+        { "$ref": "#/$defs/bindings/snmp" },
+        { "$ref": "#/$defs/bindings/ethernet_ip" },
+        { "$ref": "#/$defs/bindings/profinet" },
+        { "$ref": "#/$defs/bindings/ethercat" },
+        { "$ref": "#/$defs/bindings/file_transfer" },
+        { "$ref": "#/$defs/bindings/other" }
+      ]
+    },
+    "fieldbus_addressing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scheme", "value"],
+      "properties": {
+        "scheme": { "type": "string", "enum": ["tag", "slot_index_subindex", "pdo"] },
+        "value":  { "type": "string" }
+      }
+    },
+    "frame_common": {
+      "type": "object",
+      "required": ["request_frame", "framing"],
+      "properties": {
+        "request_frame": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["encoding", "value"],
+          "properties": {
+            "encoding": { "type": "string", "enum": ["hex", "bytes_template", "struct"] },
+            "value":    {}
+          }
+        },
+        "response_frame": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["encoding", "value"],
+          "properties": {
+            "encoding": { "type": "string", "enum": ["hex", "bytes_template", "struct"] },
+            "value":    {}
+          }
+        },
+        "framing": {
+          "type": "string",
+          "enum": ["none", "length_prefix", "delimiter", "fixed_length", "checksum_appended"]
+        },
+        "framing_params": { "type": "object" },
+        "byte_order":     { "type": "string", "enum": ["ABCD", "DCBA", "BADC", "CDAB"] }
+      }
+    },
+    "bindings": {
+      "scpi": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["protocol_id", "protocol_kind", "command_template", "is_query"],
+        "properties": {
+          "protocol_id":         { "type": "string" },
+          "protocol_kind":       { "const": "scpi" },
+          "command_template":    { "type": "string", "minLength": 1 },
+          "is_query":            { "type": "boolean" },
+          "response_pattern":    { "type": "string" },
+          "terminator":          { "type": "string" },
+          "response_terminator": { "type": "string" },
+          "timeout_ms":          { "type": "integer", "minimum": 1 }
+        },
+        "if":   { "properties": { "is_query": { "const": true } }, "required": ["is_query"] },
+        "then": { "required": ["response_pattern"] }
+      },
+      "usb_tmc": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["protocol_id", "protocol_kind", "command_template", "is_query"],
+        "properties": {
+          "protocol_id":         { "type": "string" },
+          "protocol_kind":       { "const": "usb_tmc" },
+          "command_template":    { "type": "string", "minLength": 1 },
+          "is_query":            { "type": "boolean" },
+          "response_pattern":    { "type": "string" },
+          "terminator":          { "type": "string" },
+          "response_terminator": { "type": "string" },
+          "timeout_ms":          { "type": "integer", "minimum": 1 }
+        },
+        "if":   { "properties": { "is_query": { "const": true } }, "required": ["is_query"] },
+        "then": { "required": ["response_pattern"] }
+      },
+      "modbus_tcp": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["protocol_id", "protocol_kind", "function_code", "byte_order"],
+        "properties": {
+          "protocol_id":        { "type": "string" },
+          "protocol_kind":      { "const": "modbus_tcp" },
+          "function_code":      { "type": "integer", "minimum": 1, "maximum": 127 },
+          "address":            { "type": "integer", "minimum": 0 },
+          "address_template":   { "type": "string" },
+          "quantity":           { "type": "integer", "minimum": 1 },
+          "quantity_template":  { "type": "string" },
+          "byte_order":         { "type": "string", "enum": ["ABCD", "DCBA", "BADC", "CDAB"] },
+          "word_order":         { "type": "string", "enum": ["AB", "BA"] },
+          "unit_id":            { "type": "integer", "minimum": 0, "maximum": 255 },
+          "value_template":     {}
+        },
+        "oneOf": [
+          { "required": ["address"], "not": { "required": ["address_template"] } },
+          { "required": ["address_template"], "not": { "required": ["address"] } }
+        ]
+      },
+      "modbus_rtu": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["protocol_id", "protocol_kind", "function_code", "byte_order"],
+        "properties": {
+          "protocol_id":        { "type": "string" },
+          "protocol_kind":      { "const": "modbus_rtu" },
+          "function_code":      { "type": "integer", "minimum": 1, "maximum": 127 },
+          "address":            { "type": "integer", "minimum": 0 },
+          "address_template":   { "type": "string" },
+          "quantity":           { "type": "integer", "minimum": 1 },
+          "quantity_template":  { "type": "string" },
+          "byte_order":         { "type": "string", "enum": ["ABCD", "DCBA", "BADC", "CDAB"] },
+          "word_order":         { "type": "string", "enum": ["AB", "BA"] },
+          "unit_id":            { "type": "integer", "minimum": 0, "maximum": 255 },
+          "value_template":     {}
+        },
+        "oneOf": [
+          { "required": ["address"], "not": { "required": ["address_template"] } },
+          { "required": ["address_template"], "not": { "required": ["address"] } }
+        ]
+      },
+      "http_rest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["protocol_id", "protocol_kind", "method", "path_template"],
+        "properties": {
+          "protocol_id":     { "type": "string" },
+          "protocol_kind":   { "const": "http_rest" },
+          "method":          { "type": "string", "enum": ["GET", "POST", "PUT", "PATCH", "DELETE"] },
+          "path_template":   { "type": "string", "minLength": 1 },
+          "query_params":    { "type": "object", "additionalProperties": { "type": "string" } },
+          "headers":         { "type": "object", "additionalProperties": { "type": "string" } },
+          "request_body": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["shape", "template"],
+            "properties": {
+              "shape":    { "type": "string", "enum": ["json", "form", "raw"] },
+              "template": {}
+            }
+          },
+          "expected_status": { "type": "array", "items": { "type": "integer", "minimum": 100, "maximum": 599 }, "minItems": 1 },
+          "response_extract": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["format"],
+            "properties": {
+              "format":  { "type": "string", "enum": ["json", "text", "bytes"] },
+              "pointer": { "type": "string" }
+            }
+          }
+        }
+      },
+      "grpc": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["protocol_id", "protocol_kind", "service", "method"],
+        "properties": {
+          "protocol_id":     { "type": "string" },
+          "protocol_kind":   { "const": "grpc" },
+          "service":         { "type": "string", "minLength": 1 },
+          "method":          { "type": "string", "minLength": 1 },
+          "request_body": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["shape", "template"],
+            "properties": {
+              "shape":    { "type": "string", "enum": ["json", "form", "raw"] },
+              "template": {}
+            }
+          },
+          "response_extract": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["format"],
+            "properties": {
+              "format":  { "type": "string", "enum": ["json", "text", "bytes"] },
+              "pointer": { "type": "string" }
+            }
+          }
+        }
+      },
+      "mqtt": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["protocol_id", "protocol_kind", "publish_topic_template", "payload_template"],
+        "properties": {
+          "protocol_id":             { "type": "string" },
+          "protocol_kind":           { "const": "mqtt" },
+          "publish_topic_template":  { "type": "string", "minLength": 1 },
+          "payload_template": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["shape", "template"],
+            "properties": {
+              "shape":    { "type": "string", "enum": ["json", "form", "raw"] },
+              "template": {}
+            }
+          },
+          "qos":                     { "type": "integer", "minimum": 0, "maximum": 2 },
+          "retain":                  { "type": "boolean" },
+          "response_topic_template": { "type": "string" },
+          "response_extract": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["format"],
+            "properties": {
+              "format":  { "type": "string", "enum": ["json", "text", "bytes"] },
+              "pointer": { "type": "string" }
+            }
+          }
+        }
+      },
+      "raw_serial": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["protocol_id", "protocol_kind", "request_frame", "framing"],
+        "properties": {
+          "protocol_id":    { "type": "string" },
+          "protocol_kind":  { "const": "raw_serial" },
+          "request_frame": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["encoding", "value"],
+            "properties": {
+              "encoding": { "type": "string", "enum": ["hex", "bytes_template", "struct"] },
+              "value":    {}
+            }
+          },
+          "response_frame": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["encoding", "value"],
+            "properties": {
+              "encoding": { "type": "string", "enum": ["hex", "bytes_template", "struct"] },
+              "value":    {}
+            }
+          },
+          "framing": {
+            "type": "string",
+            "enum": ["none", "length_prefix", "delimiter", "fixed_length", "checksum_appended"]
+          },
+          "framing_params": { "type": "object" },
+          "byte_order":     { "type": "string", "enum": ["ABCD", "DCBA", "BADC", "CDAB"] }
+        }
+      },
+      "canopen": {
+        "allOf": [
+          { "$ref": "#/$defs/frame_common" },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["protocol_id", "protocol_kind", "cob_id"],
+            "properties": {
+              "protocol_id":     { "type": "string" },
+              "protocol_kind":   { "const": "canopen" },
+              "cob_id":          { "type": "integer", "minimum": 0 },
+              "pdo_index":       { "type": "integer", "minimum": 0 },
+              "request_frame":   {},
+              "response_frame":  {},
+              "framing":         {},
+              "framing_params":  {},
+              "byte_order":      {}
+            }
+          }
+        ]
+      },
+      "j1939": {
+        "allOf": [
+          { "$ref": "#/$defs/frame_common" },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["protocol_id", "protocol_kind", "pgn"],
+            "properties": {
+              "protocol_id":     { "type": "string" },
+              "protocol_kind":   { "const": "j1939" },
+              "pgn":             { "type": "integer", "minimum": 0 },
+              "priority":        { "type": "integer", "minimum": 0, "maximum": 7 },
+              "request_frame":   {},
+              "response_frame":  {},
+              "framing":         {},
+              "framing_params":  {},
+              "byte_order":      {}
+            }
+          }
+        ]
+      },
+      "i2c_register": {
+        "allOf": [
+          { "$ref": "#/$defs/frame_common" },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["protocol_id", "protocol_kind", "device_address", "register_address", "access", "byte_count"],
+            "properties": {
+              "protocol_id":      { "type": "string" },
+              "protocol_kind":    { "const": "i2c_register" },
+              "device_address":   { "type": "integer", "minimum": 0, "maximum": 127 },
+              "register_address": { "type": "integer", "minimum": 0 },
+              "access":           { "type": "string", "enum": ["read", "write"] },
+              "byte_count":       { "type": "integer", "minimum": 1 },
+              "request_frame":    {},
+              "response_frame":   {},
+              "framing":          {},
+              "framing_params":   {},
+              "byte_order":       {}
+            }
+          }
+        ]
+      },
+      "spi_register": {
+        "allOf": [
+          { "$ref": "#/$defs/frame_common" },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["protocol_id", "protocol_kind", "chip_select", "register_address", "access", "byte_count"],
+            "properties": {
+              "protocol_id":      { "type": "string" },
+              "protocol_kind":    { "const": "spi_register" },
+              "chip_select":      { "type": "integer", "minimum": 0 },
+              "register_address": { "type": "integer", "minimum": 0 },
+              "access":           { "type": "string", "enum": ["read", "write"] },
+              "byte_count":       { "type": "integer", "minimum": 1 },
+              "request_frame":    {},
+              "response_frame":   {},
+              "framing":          {},
+              "framing_params":   {},
+              "byte_order":       {}
+            }
+          }
+        ]
+      },
+      "opc_ua": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["protocol_id", "protocol_kind", "operation", "node_id_template"],
+        "properties": {
+          "protocol_id":         { "type": "string" },
+          "protocol_kind":       { "const": "opc_ua" },
+          "operation":           { "type": "string", "enum": ["read", "write", "call_method", "subscribe"] },
+          "node_id_template":    { "type": "string" },
+          "method_id_template":  { "type": "string" },
+          "input_arguments": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["name", "source"],
+              "properties": {
+                "name":   { "type": "string" },
+                "source": {}
+              }
+            }
+          },
+          "data_type":           { "type": "string" }
+        },
+        "if":   { "properties": { "operation": { "const": "call_method" } }, "required": ["operation"] },
+        "then": { "required": ["method_id_template", "input_arguments"] }
+      },
+      "snmp": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["protocol_id", "protocol_kind", "operation", "oid_template"],
+        "properties": {
+          "protocol_id":   { "type": "string" },
+          "protocol_kind": { "const": "snmp" },
+          "operation":     { "type": "string", "enum": ["get", "set", "getnext", "walk"] },
+          "oid_template":  { "type": "string", "pattern": "^[0-9.]+$|.*\\{.*\\}.*" },
+          "value_type": {
+            "type": "string",
+            "enum": ["integer", "octet_string", "oid", "counter32", "gauge32", "timeticks", "ipaddress"]
+          }
+        },
+        "if":   { "properties": { "operation": { "const": "set" } }, "required": ["operation"] },
+        "then": { "required": ["value_type"] }
+      },
+      "ethernet_ip": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["protocol_id", "protocol_kind", "addressing", "operation"],
+        "properties": {
+          "protocol_id":   { "type": "string" },
+          "protocol_kind": { "const": "ethernet_ip" },
+          "addressing":    { "$ref": "#/$defs/fieldbus_addressing" },
+          "operation":     { "type": "string", "enum": ["read", "write"] },
+          "count":         { "type": "integer", "minimum": 1 }
+        }
+      },
+      "profinet": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["protocol_id", "protocol_kind", "addressing", "operation"],
+        "properties": {
+          "protocol_id":   { "type": "string" },
+          "protocol_kind": { "const": "profinet" },
+          "addressing":    { "$ref": "#/$defs/fieldbus_addressing" },
+          "operation":     { "type": "string", "enum": ["read", "write"] },
+          "count":         { "type": "integer", "minimum": 1 }
+        }
+      },
+      "ethercat": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["protocol_id", "protocol_kind", "addressing", "operation"],
+        "properties": {
+          "protocol_id":   { "type": "string" },
+          "protocol_kind": { "const": "ethercat" },
+          "addressing":    { "$ref": "#/$defs/fieldbus_addressing" },
+          "operation":     { "type": "string", "enum": ["read", "write"] },
+          "count":         { "type": "integer", "minimum": 1 }
+        }
+      },
+      "file_transfer": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["protocol_id", "protocol_kind", "mechanism", "direction", "remote_path_template"],
+        "properties": {
+          "protocol_id":          { "type": "string" },
+          "protocol_kind":        { "const": "file_transfer" },
+          "mechanism": {
+            "type": "string",
+            "enum": ["ftp", "sftp", "scp", "http_upload", "http_download", "tftp",
+                     "modbus_file_record", "scpi_mmem", "usb_msc", "raw_block_serial", "other"]
+          },
+          "direction":            { "type": "string", "enum": ["upload", "download"] },
+          "remote_path_template": { "type": "string", "minLength": 1 },
+          "local_path_template":  { "type": "string" },
+          "transfer_mode":        { "type": "string", "enum": ["binary", "text"] },
+          "chunk_size_bytes":     { "type": "integer", "minimum": 1 },
+          "expected_size": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["source"],
+            "properties": {
+              "source": { "type": "string", "enum": ["fixed", "param", "header", "unknown"] },
+              "value":  {}
+            }
+          },
+          "verify": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["algorithm"],
+            "properties": {
+              "algorithm":       { "type": "string", "enum": ["md5", "sha1", "sha256", "crc16", "crc32", "none"] },
+              "checksum_source": { "type": "string", "enum": ["param", "header", "trailer"] },
+              "checksum_ref":    { "type": "string" }
+            }
+          },
+          "auth": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["scheme"],
+            "properties": {
+              "scheme":           { "type": "string", "enum": ["none", "password", "key", "token"] },
+              "credential_hint":  { "type": "string" }
+            }
+          },
+          "mechanism_specific":   { "type": "object" }
+        }
+      },
+      "other": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["protocol_id", "protocol_kind", "extension", "details"],
+        "properties": {
+          "protocol_id":   { "type": "string" },
+          "protocol_kind": { "const": "other" },
+          "extension":     { "type": "string", "pattern": "^[a-z][a-z0-9_]*\\.[A-Za-z0-9_.-]+$" },
+          "details":       { "type": "object" }
+        }
+      }
+    }
+  }
+}

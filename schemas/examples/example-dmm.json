@@ -1,0 +1,126 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "schema_version": "1.0.0",
+  "device": {
+    "manufacturer": "Acme",
+    "model": "ADM-3000",
+    "name": "Acme 6.5-digit DMM",
+    "firmware_version": "2.4.1",
+    "description": "Bench digital multimeter with LAN, USB, and Modbus interfaces.",
+    "documentation": {
+      "manual_url": "https://example.org/manuals/adm-3000",
+      "manual_revision": "Rev C"
+    }
+  },
+  "interfaces": [
+    { "id": "lan", "kind": "ethernet", "connector": "RJ-45" },
+    { "id": "usb", "kind": "usb",      "connector": "USB-B" }
+  ],
+  "protocols": [
+    { "id": "scpi_lan", "kind": "scpi",         "runs_on": ["lan", "usb"] },
+    { "id": "mb_lan",   "kind": "modbus_tcp",   "runs_on": ["lan"],
+      "defaults": {"unit_id": 1} },
+    { "id": "ft_lan",   "kind": "file_transfer","runs_on": ["lan"] }
+  ],
+  "commands": [
+    {
+      "id": "idn",
+      "name": "Identify",
+      "description": "Returns manufacturer, model, serial, firmware.",
+      "category": "diagnostic",
+      "parameters": [],
+      "output": {
+        "kind": "scalar", "type": "string", "wire_type": "ascii",
+        "description": "Comma-separated identification string.",
+        "example": "Acme,ADM-3000,SN00042,2.4.1"
+      },
+      "binding": {
+        "protocol_id": "scpi_lan",
+        "protocol_kind": "scpi",
+        "command_template": "*IDN?",
+        "is_query": true,
+        "response_pattern": "(?P<value>.+)"
+      }
+    },
+    {
+      "id": "measure_dc_voltage",
+      "name": "Measure DC Voltage",
+      "description": "Reads DC voltage on the selected input channel.",
+      "category": "measurement",
+      "parameters": [
+        {
+          "name": "channel",
+          "description": "Input channel index.",
+          "type": "integer",
+          "wire_type": "uint8",
+          "allowed_values": [1, 2, 3, 4],
+          "default": 1,
+          "required": true,
+          "example": 2
+        }
+      ],
+      "output": {
+        "kind": "scalar", "type": "number", "wire_type": "float64",
+        "units": "V",
+        "description": "DC voltage on the selected channel.",
+        "example": 4.998
+      },
+      "binding": {
+        "protocol_id": "scpi_lan",
+        "protocol_kind": "scpi",
+        "command_template": ":MEAS:VOLT:DC? (@{channel})",
+        "is_query": true,
+        "response_pattern": "(?P<value>[-+0-9.eE]+)",
+        "terminator": "\n",
+        "response_terminator": "\n"
+      },
+      "examples": [
+        { "parameters": {"channel": 2}, "output": 4.998, "note": "Reading 5V ref." }
+      ]
+    },
+    {
+      "id": "read_serial_number",
+      "name": "Read Serial Number (Modbus)",
+      "description": "Reads a 4-register block holding the device serial number.",
+      "category": "diagnostic",
+      "parameters": [],
+      "output": {
+        "kind": "scalar", "type": "string", "wire_type": "ascii",
+        "description": "8-byte ASCII serial number."
+      },
+      "binding": {
+        "protocol_id": "mb_lan",
+        "protocol_kind": "modbus_tcp",
+        "function_code": 3,
+        "address": 40010,
+        "quantity": 4,
+        "byte_order": "ABCD",
+        "word_order": "AB",
+        "unit_id": 1
+      }
+    },
+    {
+      "id": "save_screen_to_host",
+      "name": "Save Screen as PNG",
+      "description": "Downloads the current scope screen capture to the host as PNG.",
+      "category": "diagnostic",
+      "parameters": [
+        {
+          "name": "remote_name",
+          "description": "On-instrument source file.",
+          "type": "string", "wire_type": "ascii",
+          "example": "INT:\\screen.png", "required": true
+        }
+      ],
+      "output": { "kind": "file", "mime_type": "image/png" },
+      "binding": {
+        "protocol_id": "ft_lan",
+        "protocol_kind": "file_transfer",
+        "mechanism": "http_download",
+        "direction": "download",
+        "remote_path_template": "/lxi/screen?path={remote_name}",
+        "transfer_mode": "binary"
+      }
+    }
+  ]
+}

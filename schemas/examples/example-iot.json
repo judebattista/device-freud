@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "schema_version": "1.0.0",
+  "device": {
+    "manufacturer": "Gamma IoT",
+    "model": "GIO-Hub-1",
+    "name": "Gamma IoT Hub",
+    "firmware_version": "0.9.3",
+    "description": "Wi-Fi gateway exposing both HTTP REST and MQTT control surfaces."
+  },
+  "interfaces": [
+    { "id": "wifi", "kind": "wireless", "physical": {"band": "2.4GHz"} }
+  ],
+  "protocols": [
+    { "id": "rest", "kind": "http_rest", "runs_on": ["wifi"],
+      "connection": {"host_template": "{ip}", "port": 443} },
+    { "id": "mqtt", "kind": "mqtt",      "runs_on": ["wifi"],
+      "connection": {"broker_template": "{broker_host}:1883"} }
+  ],
+  "commands": [
+    {
+      "id": "get_status",
+      "name": "Get Hub Status",
+      "description": "Returns hub health and connected-device count.",
+      "category": "diagnostic",
+      "parameters": [],
+      "output": {
+        "kind": "record",
+        "fields": [
+          {"name": "uptime_s", "description": "uptime seconds", "type": "integer", "wire_type": "uint32", "units": "s"},
+          {"name": "devices",  "description": "connected device count", "type": "integer", "wire_type": "uint16"}
+        ]
+      },
+      "binding": {
+        "protocol_id": "rest",
+        "protocol_kind": "http_rest",
+        "method": "GET",
+        "path_template": "/api/v1/status",
+        "expected_status": [200],
+        "response_extract": {"format": "json", "pointer": ""}
+      }
+    },
+    {
+      "id": "set_light",
+      "name": "Set Light State",
+      "description": "Turns a paired light on or off.",
+      "category": "control",
+      "parameters": [
+        {"name": "device_id", "description": "Paired light id.", "type": "string", "required": true},
+        {"name": "on",        "description": "On/off state.",   "type": "boolean", "required": true}
+      ],
+      "output": {"kind": "none"},
+      "binding": {
+        "protocol_id": "mqtt",
+        "protocol_kind": "mqtt",
+        "publish_topic_template": "hub/lights/{device_id}/set",
+        "payload_template": {"shape": "json", "template": {"on": "{on}"}},
+        "qos": 1,
+        "retain": false
+      }
+    },
+    {
+      "id": "subscribe_temperature",
+      "name": "Subscribe to Temperature Updates",
+      "description": "Subscribes to a sensor's periodic temperature messages.",
+      "category": "measurement",
+      "parameters": [
+        {"name": "sensor_id", "description": "Sensor id.", "type": "string", "required": true}
+      ],
+      "output": {
+        "kind": "stream", "type": "number", "wire_type": "float32", "units": "°C",
+        "description": "Periodic temperature samples published by the sensor."
+      },
+      "binding": {
+        "protocol_id": "mqtt",
+        "protocol_kind": "mqtt",
+        "publish_topic_template": "hub/sensors/{sensor_id}/subscribe",
+        "payload_template": {"shape": "json", "template": {}},
+        "qos": 0,
+        "response_topic_template": "hub/sensors/{sensor_id}/temperature",
+        "response_extract": {"format": "json", "pointer": "/value"}
+      }
+    }
+  ]
+}

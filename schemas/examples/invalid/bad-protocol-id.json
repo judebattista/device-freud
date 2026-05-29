@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "schema_version": "1.0.0",
+  "device": {"manufacturer": "Acme", "model": "X1"},
+  "interfaces": [{"id": "i0", "kind": "ethernet"}],
+  "protocols": [{"id": "p0", "kind": "scpi", "runs_on": ["i0"]}],
+  "commands": [{
+    "id": "x", "name": "x", "description": "x",
+    "parameters": [],
+    "output": {"kind": "none"},
+    "binding": {"protocol_id": "ghost", "protocol_kind": "scpi",
+                "command_template": "x", "is_query": false}
+  }]
+}

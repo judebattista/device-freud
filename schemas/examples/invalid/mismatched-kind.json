@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "schema_version": "1.0.0",
+  "device": {"manufacturer": "Acme", "model": "X1"},
+  "interfaces": [{"id": "i0", "kind": "ethernet"}],
+  "protocols": [{"id": "p0", "kind": "scpi", "runs_on": ["i0"]}],
+  "commands": [{
+    "id": "x", "name": "x", "description": "x",
+    "parameters": [],
+    "output": {"kind": "none"},
+    "binding": {
+      "protocol_id": "p0",
+      "protocol_kind": "modbus_tcp",
+      "function_code": 3, "address": 1, "byte_order": "ABCD"
+    }
+  }]
+}

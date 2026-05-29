@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "schema_version": "1.0.0",
+  "device": {
+    "manufacturer": "Beta Controls",
+    "model": "BC-PLC-1000",
+    "name": "Beta PLC 1000",
+    "firmware_version": "1.2.0",
+    "description": "Compact industrial PLC with 16 DI / 16 DO / 8 AI."
+  },
+  "interfaces": [
+    { "id": "lan", "kind": "ethernet", "connector": "RJ-45" }
+  ],
+  "protocols": [
+    { "id": "mb", "kind": "modbus_tcp", "runs_on": ["lan"],
+      "defaults": {"unit_id": 1} }
+  ],
+  "commands": [
+    {
+      "id": "read_di_block",
+      "name": "Read Digital Inputs",
+      "description": "Reads the 16-bit digital input block.",
+      "category": "measurement",
+      "parameters": [],
+      "output": {
+        "kind": "scalar", "type": "integer", "wire_type": "uint16",
+        "description": "Bitmask of DI states; bit n = channel n."
+      },
+      "binding": {
+        "protocol_id": "mb",
+        "protocol_kind": "modbus_tcp",
+        "function_code": 3,
+        "address": 30001,
+        "quantity": 1,
+        "byte_order": "ABCD",
+        "unit_id": 1
+      }
+    },
+    {
+      "id": "write_do_channel",
+      "name": "Write Single DO Channel",
+      "description": "Sets a single digital output channel.",
+      "category": "control",
+      "parameters": [
+        {
+          "name": "channel",
+          "description": "Channel index (0-15).",
+          "type": "integer", "wire_type": "uint16",
+          "range": {"min": 0, "max": 15},
+          "required": true, "example": 3
+        },
+        {
+          "name": "state",
+          "description": "Output state.",
+          "type": "boolean", "wire_type": "bool",
+          "required": true, "example": true
+        }
+      ],
+      "output": { "kind": "none" },
+      "binding": {
+        "protocol_id": "mb",
+        "protocol_kind": "modbus_tcp",
+        "function_code": 5,
+        "address_template": "{channel}",
+        "byte_order": "ABCD",
+        "value_template": "{state}",
+        "unit_id": 1
+      }
+    },
+    {
+      "id": "read_ai_channel",
+      "name": "Read Analog Input",
+      "description": "Reads a 16-bit analog input value in raw counts.",
+      "category": "measurement",
+      "parameters": [
+        {
+          "name": "channel",
+          "description": "AI channel index (0-7).",
+          "type": "integer", "wire_type": "uint16",
+          "range": {"min": 0, "max": 7},
+          "required": true
+        }
+      ],
+      "output": {
+        "kind": "scalar", "type": "integer", "wire_type": "int16",
+        "description": "Raw ADC counts; engineering value = counts * 10 V / 32768.",
+        "units": "counts"
+      },
+      "binding": {
+        "protocol_id": "mb",
+        "protocol_kind": "modbus_tcp",
+        "function_code": 4,
+        "address_template": "{channel}",
+        "quantity": 1,
+        "byte_order": "ABCD",
+        "unit_id": 1
+      }
+    }
+  ]
+}
